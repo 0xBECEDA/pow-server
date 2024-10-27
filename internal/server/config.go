@@ -10,8 +10,14 @@ import (
 const (
 	defaultReadTimeout  = 10
 	defaultWriteTimeout = 10
-	defaultKeyTTL       = 20
 	defaultConnections  = 10
+	defaultChallengeTTL = 20
+
+	portEnv             = "PORT"
+	writeTimeoutEnv     = "WRITE_TIMEOUT"
+	readTimeoutEnv      = "READ_TIMEOUT"
+	challengeTTLEnv     = "CHALLENGE_TTL"
+	connectionsLimitEnv = "CONNECTIONS_LIMIT"
 )
 
 var (
@@ -19,21 +25,27 @@ var (
 )
 
 type Config struct {
-	Port             string
+	Port             uint64
 	ConnectionsLimit uint64
 	WriteTimeout     time.Duration
 	ReadTimeout      time.Duration
-	KeyTTL           time.Duration
+	ChallengeTTL     time.Duration
 }
 
 func (c *Config) Load() error {
-	port := os.Getenv("PORT")
+	port := os.Getenv(portEnv)
 	if port == "" {
 		return ErrEmptyPort
 	}
-	c.Port = port
 
-	writeDeadline := os.Getenv("WRITE_TIMEOUT")
+	portInt, err := strconv.ParseUint(port, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	c.Port = portInt
+
+	writeDeadline := os.Getenv(writeTimeoutEnv)
 	if writeDeadline == "" {
 		c.WriteTimeout = defaultWriteTimeout * time.Second
 	} else {
@@ -44,7 +56,7 @@ func (c *Config) Load() error {
 		c.WriteTimeout = time.Duration(dur) * time.Second
 	}
 
-	readDeadline := os.Getenv("READ_TIMEOUT")
+	readDeadline := os.Getenv(readTimeoutEnv)
 	if readDeadline == "" {
 		c.ReadTimeout = defaultReadTimeout * time.Second
 	} else {
@@ -55,18 +67,18 @@ func (c *Config) Load() error {
 		c.ReadTimeout = time.Duration(dur) * time.Second
 	}
 
-	keyTTL := os.Getenv("KEY_TTL")
+	keyTTL := os.Getenv(challengeTTLEnv)
 	if keyTTL == "" {
-		c.KeyTTL = defaultKeyTTL * time.Second
+		c.ChallengeTTL = defaultChallengeTTL * time.Second
 	} else {
 		dur, err := strconv.Atoi(keyTTL)
 		if err != nil {
 			return err
 		}
-		c.KeyTTL = time.Duration(dur) * time.Second
+		c.ChallengeTTL = time.Duration(dur) * time.Second
 	}
 
-	connLimit := os.Getenv("CONNECTIONS_LIMIT")
+	connLimit := os.Getenv(connectionsLimitEnv)
 	if connLimit == "" {
 		c.ConnectionsLimit = defaultConnections
 	} else {

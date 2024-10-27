@@ -15,8 +15,9 @@ type Server struct {
 
 	writeDeadline time.Duration
 	readDeadline  time.Duration
-	wg            sync.WaitGroup
-	sem           chan struct{}
+
+	wg  sync.WaitGroup
+	sem chan struct{}
 }
 
 func NewServer(
