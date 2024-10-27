@@ -15,7 +15,8 @@ func main() {
 		log.Fatalf("failed start server %s", err.Error())
 	}
 
-	db := storage.NewStorage(cfg.KeyTTL)
+	ctx := context.Background()
+	db := storage.NewStorage(ctx, cfg.KeyTTL)
 
 	tcpServer := server.NewServer(
 		pow.NewChallengeService(db),
@@ -24,10 +25,6 @@ func main() {
 
 	addr := ":" + cfg.Port
 	log.Printf("starting tcp server on addr %v", addr)
-
-	ctx := context.Background()
-
-	go db.Clean(ctx) // run cronjob to clean up unresolved challenges
 
 	if err := tcpServer.Listen(ctx, addr); err != nil {
 		log.Fatal(err)

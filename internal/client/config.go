@@ -10,6 +10,12 @@ import (
 const (
 	defaultReadTimeout  = 10
 	defaultWriteTimeout = 10
+
+	portEnv         = "PORT"
+	hostnameEnv     = "HOSTNAME"
+	resourceEnv     = "RESOURCE"
+	writeTimeoutEnv = "WRITE_TIMEOUT"
+	readTimeoutEnv  = "READ_TIMEOUT"
 )
 
 var (
@@ -26,13 +32,13 @@ type Config struct {
 }
 
 func (c *Config) Load() error {
-	host := os.Getenv("HOSTNAME")
+	host := os.Getenv(hostnameEnv)
 	if host == "" {
 		return ErrEmptyHost
 	}
 	c.Hostname = host
 
-	port := os.Getenv("PORT")
+	port := os.Getenv(portEnv)
 	if port == "" {
 		return ErrEmptyPort
 	}
@@ -42,9 +48,9 @@ func (c *Config) Load() error {
 	}
 
 	c.Port = portInt
-	c.Resource = os.Getenv("RESOURCE")
+	c.Resource = os.Getenv(resourceEnv)
 
-	writeDeadline := os.Getenv("WRITE_DEADLINE")
+	writeDeadline := os.Getenv(writeTimeoutEnv)
 	if writeDeadline == "" {
 		c.WriteTimeout = defaultWriteTimeout * time.Second
 	} else {
@@ -55,7 +61,7 @@ func (c *Config) Load() error {
 		c.WriteTimeout = time.Duration(dur) * time.Second
 	}
 
-	readDeadline := os.Getenv("READ_DEADLINE")
+	readDeadline := os.Getenv(readTimeoutEnv)
 	if readDeadline == "" {
 		c.ReadTimeout = defaultReadTimeout * time.Second
 	} else {

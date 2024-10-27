@@ -12,7 +12,6 @@ type Store interface {
 	Add(key uint64)
 	Get(key uint64) (uint64, error)
 	Delete(key uint64)
-	Clean(ctx context.Context)
 }
 
 var ErrKeyNotFound = errors.New("key does not exist in storage")
@@ -23,12 +22,15 @@ type inMemoryDB struct {
 	rw       *sync.RWMutex
 }
 
-func NewStorage(keyTTL time.Duration) Store {
-	return &inMemoryDB{
+func NewStorage(ctx context.Context, keyTTL time.Duration) Store {
+	db := &inMemoryDB{
 		memoryDB: make(map[uint64]time.Time),
 		rw:       &sync.RWMutex{},
 		keyTTL:   keyTTL,
 	}
+
+	go db.clean(ctx) // clean up old challenges
+	return db
 }
 
 func (r *inMemoryDB) Add(key uint64) {
@@ -62,8 +64,8 @@ func (r *inMemoryDB) Delete(key uint64) {
 	delete(r.memoryDB, key)
 }
 
-// Clean removes expired keys.
-func (r *inMemoryDB) Clean(ctx context.Context) {
+// clean removes expired keys.
+func (r *inMemoryDB) clean(ctx context.Context) {
 	tick := time.NewTicker(r.keyTTL)
 
 	for {

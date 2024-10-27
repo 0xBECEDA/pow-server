@@ -1,6 +1,7 @@
 package pow
 
 import (
+	"crypto/sha1"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -9,7 +10,6 @@ import (
 	"math/big"
 	"math/rand"
 	"time"
-	"world-of-wisdom/internal/utils"
 )
 
 const (
@@ -20,7 +20,7 @@ const (
 type Challenge interface {
 	String() string
 	Check() bool
-	Compute(maxIterations int64) error
+	Compute(maxIterations uint64) error
 	GetNonce() uint64
 }
 
@@ -59,7 +59,7 @@ func (h *hashcash) String() string {
 }
 
 func (h *hashcash) Check() bool {
-	hashString := utils.Data2Sha1Hash(h.String())
+	hashString := data2Sha1Hash(h.String())
 	if h.Bits > len(hashString) {
 		return false
 	}
@@ -72,8 +72,8 @@ func (h *hashcash) Check() bool {
 	return true
 }
 
-func (h *hashcash) Compute(maxIterations int64) error {
-	for h.Counter <= maxIterations || maxIterations <= 0 {
+func (h *hashcash) Compute(maxIterations uint64) error {
+	for h.Counter <= int64(maxIterations) {
 		if h.Check() {
 			return nil
 		}
@@ -96,4 +96,11 @@ func Unmarshal(data []byte) (Challenge, error) {
 
 func randBytes() []byte {
 	return big.NewInt(int64(rand.Uint64())).Bytes()
+}
+
+func data2Sha1Hash(data string) string {
+	h := sha1.New()
+	h.Write([]byte(data))
+	bs := h.Sum(nil)
+	return fmt.Sprintf("%x", bs)
 }
