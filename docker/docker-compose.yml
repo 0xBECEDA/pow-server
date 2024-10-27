@@ -1,0 +1,22 @@
+version: "3"
+services:
+  server:
+    container_name: server
+    hostname: server
+    image: app:latest
+    environment:
+      PORT: 8080
+    command: ["/server"]
+    expose:
+      - "8080"
+  client:
+    container_name: client
+    image: app:latest
+    environment:
+      PORT: 8080
+      HOSTNAME: server
+      RESOURCE: example.com
+    command: ["/client"]
+    restart: "on-failure"
+    depends_on:
+      - server
