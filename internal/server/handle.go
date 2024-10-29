@@ -12,21 +12,34 @@ import (
 )
 
 var (
-	ErrEmptyMessage      = errors.New("empty message")
-	ErrFailedToMarshal   = errors.New("error marshaling timestamp")
-	ErrFailedToGetRand   = errors.New("error get rand from cache")
-	ErrChallengeUnsolved = errors.New("challenge is not solved")
-	ErrUnknownRequest    = errors.New("unknown request received")
+	ErrEmptyMessage             = errors.New("empty message")
+	ErrFailedToGetNonce         = errors.New("error get nonce from cache")
+	ErrChallengeUnsolved        = errors.New("challenge is not solved")
+	ErrUnknownRequest           = errors.New("unknown request received")
+	ErrConnectionsLimitExceeded = errors.New("connections limit exceeded, try later")
 )
 
-func (s *Server) handle(ctx context.Context, conn net.Conn) {
+func (s *Server) handleConnRefused(conn net.Conn) {
+	response := &message.Message{
+		Type: message.ErrResp,
+		Data: ErrConnectionsLimitExceeded.Error(),
+	}
+
+	if err := utils.WriteConn(*response, conn, s.cfg.WriteTimeout); err != nil {
+		log.Printf("error sending tcp message: %s", err.Error())
+	}
+
+	if err := conn.Close(); err != nil {
+		log.Printf("error closing client connection: %s", err.Error())
+	}
+}
+
+func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 	defer func() {
 		if err := conn.Close(); err != nil {
 			log.Printf("error closing client connection: %s", err.Error())
 		}
-
 		<-s.sem
-		s.wg.Done()
 	}()
 
 	for {
@@ -34,10 +47,10 @@ func (s *Server) handle(ctx context.Context, conn net.Conn) {
 		case <-ctx.Done():
 			return
 		default:
-			req, err := utils.ReadConn(conn, s.readDeadline)
+			req, err := utils.ReadConn(conn, s.cfg.ReadTimeout)
 			if err != nil {
 				log.Printf("error reading request: %s", err.Error())
-				return
+				continue
 			}
 
 			if len(req) == 0 {
@@ -47,13 +60,15 @@ func (s *Server) handle(ctx context.Context, conn net.Conn) {
 			response, err := s.processClientRequest(req)
 			if err != nil {
 				log.Printf("error processing request: %s", err.Error())
-				continue
+
+				response = &message.Message{
+					Type: message.ErrResp,
+					Data: err.Error(),
+				}
 			}
 
-			if response != nil {
-				if err = utils.WriteConn(*response, conn, s.writeDeadline); err != nil {
-					log.Printf("error sending tcp message: %s", err.Error())
-				}
+			if err = utils.WriteConn(*response, conn, s.cfg.WriteTimeout); err != nil {
+				log.Printf("error sending tcp message: %s", err.Error())
 			}
 		}
 	}
@@ -82,12 +97,12 @@ func (s *Server) challengeHandler(req *message.Message) (*message.Message, error
 
 	hash := pow.NewHashcash(5, req.Data)
 
-	log.Printf("adding hash %++v", hash)
+	log.Printf("adding challenge %++v", hash)
 
 	s.powService.Add(hash.GetNonce())
 	marshaledStamp, err := msgpack.Marshal(hash)
 	if err != nil {
-		return nil, ErrFailedToMarshal
+		return nil, err
 	}
 
 	return message.NewMessage(message.ChallengeResp, string(marshaledStamp)), nil
@@ -102,7 +117,7 @@ func (s *Server) quoteHandler(parsedRequest *message.Message) (*message.Message,
 	randNum := hash.GetNonce()
 
 	if ok := s.powService.Exists(randNum); !ok {
-		return nil, ErrFailedToGetRand
+		return nil, ErrFailedToGetNonce
 	}
 
 	if !hash.Check() {

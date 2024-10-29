@@ -10,7 +10,7 @@ import (
 const (
 	defaultReadTimeout  = 10
 	defaultWriteTimeout = 10
-	defaultConnections  = 10
+	defaultConnections  = 100
 	defaultChallengeTTL = 20
 
 	portEnv             = "PORT"
@@ -18,6 +18,7 @@ const (
 	readTimeoutEnv      = "READ_TIMEOUT"
 	challengeTTLEnv     = "CHALLENGE_TTL"
 	connectionsLimitEnv = "CONNECTIONS_LIMIT"
+	maxWorkersEnv       = "MAX_NUM_WORKERS"
 )
 
 var (
@@ -27,6 +28,8 @@ var (
 type Config struct {
 	Port             uint64
 	ConnectionsLimit uint64
+	MinWorkers       uint64
+	MaxWorkers       uint64
 	WriteTimeout     time.Duration
 	ReadTimeout      time.Duration
 	ChallengeTTL     time.Duration
@@ -89,5 +92,17 @@ func (c *Config) Load() error {
 		c.ConnectionsLimit = limit
 	}
 
+	maxWorkers := os.Getenv(maxWorkersEnv)
+	if maxWorkers == "" {
+		c.MaxWorkers = c.ConnectionsLimit
+	} else {
+		workers, err := strconv.ParseUint(maxWorkers, 10, 64)
+		if err != nil {
+			return err
+		}
+		c.MaxWorkers = workers
+	}
+
+	c.MinWorkers = c.MaxWorkers / 2
 	return nil
 }

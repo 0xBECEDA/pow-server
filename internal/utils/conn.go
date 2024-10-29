@@ -19,10 +19,7 @@ func WriteConn(msg message.Message, conn net.Conn, deadline time.Duration) error
 	}
 
 	_, err = conn.Write(marshaledMsg)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func ReadConn(conn net.Conn, deadline time.Duration) ([]byte, error) {
@@ -37,7 +34,7 @@ func ReadConn(conn net.Conn, deadline time.Duration) ([]byte, error) {
 		n, err := conn.Read(buffer)
 		if err != nil {
 			if err == io.EOF {
-				break
+				return data, nil
 			}
 			return nil, err
 		}

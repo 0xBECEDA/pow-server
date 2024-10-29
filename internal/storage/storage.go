@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 	"time"
 )
@@ -14,7 +13,7 @@ type Store interface {
 	Delete(key uint64)
 }
 
-var ErrKeyNotFound = errors.New("key does not exist in storage")
+var ErrKeyNotFound = errors.New("key not found")
 
 type inMemoryDB struct {
 	memoryDB map[uint64]time.Time
@@ -38,17 +37,16 @@ func (r *inMemoryDB) Add(key uint64) {
 	defer r.rw.Unlock()
 
 	r.memoryDB[key] = time.Now().Add(r.keyTTL)
-	log.Printf("added key: %d", key)
 }
 
 func (r *inMemoryDB) Get(key uint64) (uint64, error) {
-	log.Printf("getting key: %d", key)
+	now := time.Now()
 
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	_, ok := r.memoryDB[key]
-	if ok {
+	ttl, ok := r.memoryDB[key]
+	if ok && ttl.After(now) {
 		return key, nil
 	}
 
@@ -56,8 +54,6 @@ func (r *inMemoryDB) Get(key uint64) (uint64, error) {
 }
 
 func (r *inMemoryDB) Delete(key uint64) {
-	log.Printf("deleting key: %d", key)
-
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
@@ -74,13 +70,11 @@ func (r *inMemoryDB) clean(ctx context.Context) {
 			return
 		case <-tick.C:
 			now := time.Now()
-			log.Printf("clean up storage started at %v", now)
 
 			r.rw.Lock()
 			for key, ttl := range r.memoryDB {
 				if ttl.Before(now) {
 					delete(r.memoryDB, key)
-					log.Printf("key %v expired and was deleted", key)
 				}
 			}
 			r.rw.Unlock()

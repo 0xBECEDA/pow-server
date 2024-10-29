@@ -11,41 +11,48 @@ import (
 	"world-of-wisdom/internal/utils"
 )
 
-const maxIterations = 10000000
+const (
+	maxIterations = 10000000
+	maxRetries    = 5
+)
 
 type Client struct {
-	resource     string
-	writeTimeout time.Duration
-	readTimeout  time.Duration
-	conn         net.Conn
+	cfg  *Config
+	conn net.Conn
 }
 
 func New(config *Config) *Client {
 	return &Client{
-		resource:     config.Resource,
-		writeTimeout: config.WriteTimeout,
-		readTimeout:  config.ReadTimeout,
+		cfg: config,
 	}
 }
 
-func (c *Client) Dial(host string, port uint64) error {
-	addr := fmt.Sprintf("%v:%v", host, port)
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		return err
-	}
+func (c *Client) Dial() error {
+	var (
+		err  error
+		conn net.Conn
+	)
 
-	c.conn = conn
-	return nil
+	addr := fmt.Sprintf("%v:%v", c.cfg.Hostname, c.cfg.Port)
+
+	for i := 0; i < maxRetries; i++ {
+		conn, err = net.Dial("tcp", addr)
+		if err == nil {
+			c.conn = conn
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return err
 }
 
 func (c *Client) Run() error {
 	req := message.NewMessage(message.ChallengeReq, "")
-	if err := utils.WriteConn(*req, c.conn, c.writeTimeout); err != nil {
+	if err := utils.WriteConn(*req, c.conn, c.cfg.WriteTimeout); err != nil {
 		return err
 	}
 
-	resp, err := utils.ReadConn(c.conn, c.readTimeout)
+	resp, err := utils.ReadConn(c.conn, c.cfg.ReadTimeout)
 	if err != nil {
 		return err
 	}
@@ -73,11 +80,11 @@ func (c *Client) handleChallenge(resp []byte) error {
 		message.Message{
 			Type: message.QuoteReq,
 			Data: string(challengeBytes),
-		}, c.conn, c.writeTimeout); err != nil {
+		}, c.conn, c.cfg.WriteTimeout); err != nil {
 		return err
 	}
 
-	respQuote, err := utils.ReadConn(c.conn, c.readTimeout)
+	respQuote, err := utils.ReadConn(c.conn, c.cfg.ReadTimeout)
 	if err != nil {
 		return err
 	}

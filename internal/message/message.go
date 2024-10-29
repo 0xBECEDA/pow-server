@@ -11,6 +11,7 @@ const (
 	ChallengeResp
 	QuoteReq
 	QuoteResp
+	ErrResp
 )
 
 type Message struct {

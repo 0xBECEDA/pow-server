@@ -14,7 +14,7 @@ func main() {
 
 	tcpClient := client.New(cfg)
 
-	if err := tcpClient.Dial(cfg.Hostname, cfg.Port); err != nil {
+	if err := tcpClient.Dial(); err != nil {
 		log.Fatalf("failed to dial: %s", err.Error())
 	}
 

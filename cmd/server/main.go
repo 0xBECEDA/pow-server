@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"world-of-wisdom/internal/pow"
 	"world-of-wisdom/internal/quotes"
@@ -20,14 +19,12 @@ func main() {
 	db := storage.NewStorage(ctx, cfg.ChallengeTTL)
 
 	tcpServer := server.NewServer(
+		cfg,
 		pow.NewChallengeService(db),
 		quotes.NewService(),
-		cfg)
+	)
 
-	addr := fmt.Sprintf(":%v", cfg.Port)
-	log.Printf("starting tcp server on addr %v", addr)
-
-	if err := tcpServer.Listen(ctx, addr); err != nil {
+	if err := tcpServer.Listen(ctx); err != nil {
 		log.Fatal(err)
 	}
 }
