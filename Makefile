@@ -6,3 +6,9 @@ run: build
 
 stop:
 	docker compose -f docker/docker-compose.yml down
+
+unit-tests:
+	go test ./internal/...
+
+tests:
+	go test ./... -v

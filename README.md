@@ -1,6 +1,6 @@
-# world-of-wisdom
+# World-of-wisdom
 
-This project is proof-of-concept of TCP-server protected from DDOS attacks with the Prof of Work. As PoW algorythm I choose 
+This project is proof-of-concept of TCP-server protected from DDOS attacks with the Prof of Work. As PoW algorithm I choose 
 hashcash algorithm, because of:
 
 Proven Security: Hashcash has a proven track record of security and has been widely used in various applications, including email spam prevention and cryptocurrency mining. It relies on the computational effort required to find a hash collision, making it resistant to brute-force attacks.
@@ -20,11 +20,19 @@ Energy Efficiency: Compared to some other PoW algorithms, Hashcash is relatively
 After Prof Of Work verification, server sends one of the quotes from collection of the quotes.
 Project also includes tcp-client.
 
-## requirements
+## Requirements
 To run application you should have installed docker 20+ version and docker compose 2+ version.
+Used Go 1.23 version
 
-## how to run 
+## How to run 
+T0 run unit tests:
+`make unit-tests`
 
+To run all tests:
+``make tests``
+
+It can take sometime, because tests are containing integrations tests, which run docker containers.
+To run app:
 ``make run``
 
 It will build docker images and run server and client. 

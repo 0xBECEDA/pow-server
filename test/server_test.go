@@ -1,54 +1,46 @@
-package server
+package test
 
 import (
 	"context"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/testcontainers/testcontainers-go/modules/compose"
+	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/vmihailenco/msgpack/v5"
 	"math"
 	"net"
+	"strconv"
 	"testing"
 	"time"
 	"world-of-wisdom/internal/message"
 	"world-of-wisdom/internal/pow"
-	"world-of-wisdom/internal/quotes"
-	"world-of-wisdom/internal/storage"
+	"world-of-wisdom/internal/server"
 	"world-of-wisdom/internal/utils"
 )
 
 func TestServer(t *testing.T) {
 	const (
-		challengeTTL = 5 * time.Second
-		writeTimeout = defaultWriteTimeout * time.Second
-		readTimeout  = defaultReadTimeout * time.Second
+		challengeTTL = 7
+		writeTimeout = 10 * time.Second
+		readTimeout  = 10 * time.Second
 		port         = 8080
 		connsLimit   = 1
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	c, err := compose.NewDockerCompose("../docker/docker-compose.yml")
+	assert.NoError(t, err)
+
+	err = c.WithEnv(map[string]string{
+		"CHALLENGE_TTL":     strconv.Itoa(challengeTTL),
+		"CONNECTIONS_LIMIT": strconv.Itoa(connsLimit + 1), // add extra conn for Ryuk (https://golang.testcontainers.org/features/garbage_collector/)
+	}).
+		WaitForService("server", wait.ForListeningPort("8080/tcp").
+			WithStartupTimeout(5*time.Second)).
+		Up(context.TODO(), compose.RunServices("server"))
+	assert.NoError(t, err)
+
 	defer func() {
-		cancel()
-		time.Sleep(1 * time.Second)
-	}()
-
-	db := storage.NewStorage(ctx, challengeTTL)
-
-	// run server
-	srv := NewServer(
-		&Config{
-			Port:             port,
-			ConnectionsLimit: connsLimit,
-			WriteTimeout:     writeTimeout,
-			ReadTimeout:      readTimeout,
-			ChallengeTTL:     challengeTTL,
-			MinWorkers:       1,
-			MaxWorkers:       1,
-		},
-		pow.NewChallengeService(db),
-		quotes.NewService())
-
-	go func() {
-		assert.NoError(t, srv.Listen(ctx))
+		assert.NoError(t, c.Down(context.TODO()))
 	}()
 
 	// connect to server
@@ -64,7 +56,7 @@ func TestServer(t *testing.T) {
 
 	resp := readResp(t, conn2, readTimeout)
 	assert.Equal(t, message.ErrResp, resp.Type)
-	assert.Equal(t, ErrConnectionsLimitExceeded.Error(), resp.Data)
+	assert.Equal(t, server.ErrConnectionsLimitExceeded.Error(), resp.Data)
 
 	// 2. invalid message type -> fail
 	req = message.NewMessage(100, "")
@@ -72,7 +64,7 @@ func TestServer(t *testing.T) {
 
 	resp = readResp(t, conn, readTimeout)
 	assert.Equal(t, message.ErrResp, resp.Type)
-	assert.Equal(t, ErrUnknownRequest.Error(), resp.Data)
+	assert.Equal(t, server.ErrUnknownRequest.Error(), resp.Data)
 
 	// 3. request challenge -> send unresolved challenge  -> fail
 	req = message.NewMessage(message.ChallengeReq, "")
@@ -81,21 +73,21 @@ func TestServer(t *testing.T) {
 	resp = readResp(t, conn, readTimeout)
 	resp.Type = message.QuoteReq
 
-	err := utils.WriteConn(*resp, conn, writeTimeout)
+	err = utils.WriteConn(*resp, conn, writeTimeout)
 	assert.NoError(t, err)
 
 	resp = readResp(t, conn, readTimeout)
 	assert.Equal(t, message.ErrResp, resp.Type)
-	assert.Equal(t, ErrChallengeUnsolved.Error(), resp.Data)
+	assert.Equal(t, server.ErrChallengeUnsolved.Error(), resp.Data)
 
 	// 4. request challenge -> send resolved challenge, but too late -> fail
-	solved := solveChallenge(t, conn, challengeTTL, readTimeout, writeTimeout)
+	solved := solveChallenge(t, conn, challengeTTL*time.Second, readTimeout, writeTimeout)
 	err = utils.WriteConn(*solved, conn, writeTimeout)
 	assert.NoError(t, err)
 
 	resp = readResp(t, conn, readTimeout)
 	assert.Equal(t, message.ErrResp, resp.Type)
-	assert.Equal(t, ErrFailedToGetNonce.Error(), resp.Data)
+	assert.Equal(t, server.ErrFailedToGetNonce.Error(), resp.Data)
 
 	// 5. request challenge -> send unknown resolved challenge in time -> fail
 	req = message.NewMessage(message.ChallengeReq, "")
@@ -116,7 +108,7 @@ func TestServer(t *testing.T) {
 
 	resp = readResp(t, conn, readTimeout)
 	assert.Equal(t, message.ErrResp, resp.Type)
-	assert.Equal(t, ErrFailedToGetNonce.Error(), resp.Data)
+	assert.Equal(t, server.ErrFailedToGetNonce.Error(), resp.Data)
 
 	// 6. request challenge -> send resolved challenge in time -> success
 	solved = solveChallenge(t, conn, 0, readTimeout, writeTimeout)

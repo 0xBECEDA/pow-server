@@ -1,4 +1,4 @@
-FROM golang:1.20 as builder
+FROM golang:1.23 as builder
 
 RUN mkdir build
 COPY . /build
@@ -12,7 +12,7 @@ RUN  go build -o main
 WORKDIR /build/cmd/server
 RUN go build  -o main
 
-FROM golang:1.20
+FROM golang:1.23
 
 COPY --from=builder /build/cmd/client/main /client
 COPY --from=builder /build/cmd/server/main /server

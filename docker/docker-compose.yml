@@ -5,17 +5,24 @@ services:
     hostname: server
     image: app:latest
     environment:
-      PORT: 8080
+      - 'PORT=8080'
+      - 'CHALLENGE_TTL=${CHALLENGE_TTL}'
+      - 'CONNECTIONS_LIMIT=${CONNECTIONS_LIMIT}'
+      - 'WRITE_TIMEOUT=${WRITE_TIMEOUT}'
+      - 'READ_TIMEOUT=${READ_TIMEOUT}'
+      - 'MAX_NUM_WORKERS=${MAX_NUM_WORKERS}'
     command: ["/server"]
-    expose:
-      - "8080"
+    ports:
+      - "8080:8080"
   client:
     container_name: client
     image: app:latest
     environment:
-      PORT: 8080
-      HOSTNAME: server
-      RESOURCE: example.com
+      - 'PORT=8080'
+      - 'HOSTNAME=server'
+      - 'RESOURCE=example.com'
+      - 'WRITE_TIMEOUT=${WRITE_TIMEOUT}'
+      - 'READ_TIMEOUT=${READ_TIMEOUT}'
     command: ["/client"]
     restart: "on-failure"
     depends_on:
