@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -108,7 +107,5 @@ func (c *Config) Load() error {
 	if c.MaxWorkers == 1 {
 		c.MinWorkers = c.MaxWorkers
 	}
-
-	log.Printf("min workers: %d", c.MinWorkers)
 	return nil
 }

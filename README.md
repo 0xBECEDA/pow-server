@@ -21,8 +21,9 @@ After Prof Of Work verification, server sends one of the quotes from collection 
 Project also includes tcp-client.
 
 ## Requirements
-To run application you should have installed docker 20+ version and docker compose 2+ version.
-Used Go 1.23 version
+Docker v.20+
+Docker compose v2
+Golang min 1.21 (for project used 1.23)
 
 ## How to run 
 T0 run unit tests:

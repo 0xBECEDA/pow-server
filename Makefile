@@ -7,8 +7,11 @@ run: build
 stop:
 	docker compose -f docker/docker-compose.yml down
 
-unit-tests:
+clean-test-cache:
+	go clean -testcache
+
+unit-tests: clean-test-cache
 	go test ./internal/...
 
-tests:
+tests: clean-test-cache
 	go test ./... -v
