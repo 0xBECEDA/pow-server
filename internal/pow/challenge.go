@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/vmihailenco/msgpack/v5"
-	"math/big"
 	"math/rand"
 	"time"
 )
@@ -95,7 +94,9 @@ func Unmarshal(data []byte) (Challenge, error) {
 }
 
 func randBytes() []byte {
-	return big.NewInt(int64(rand.Uint64())).Bytes()
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, rand.Uint64())
+	return buf
 }
 
 func data2Sha1Hash(data string) string {
