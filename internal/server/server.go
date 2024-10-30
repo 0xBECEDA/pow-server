@@ -76,7 +76,14 @@ func (s *Server) Listen(ctx context.Context) error {
 		for {
 			conn, err := l.Accept()
 			if err != nil {
-				log.Printf("error accepting client connection: %v", err)
+				if netErr, ok := err.(net.Error); ok {
+					if netErr.Timeout() {
+						log.Printf("accept timeout: %v", netErr)
+						continue
+					}
+				}
+
+				log.Printf("fatal error accepting client connection: %v", err)
 				listenerErr <- err
 				return
 			}
