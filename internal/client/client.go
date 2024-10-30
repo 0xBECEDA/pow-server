@@ -41,12 +41,17 @@ func (c *Client) Dial() error {
 			c.conn = conn
 			break
 		}
+
+		log.Printf("failed to connect to %v: %v", addr, err)
+
 		time.Sleep(100 * time.Millisecond)
 	}
 	return err
 }
 
 func (c *Client) Run() error {
+	defer c.conn.Close()
+
 	req := message.NewMessage(message.ChallengeReq, "")
 	if err := utils.WriteConn(*req, c.conn, c.cfg.WriteTimeout); err != nil {
 		return err

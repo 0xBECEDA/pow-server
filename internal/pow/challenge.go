@@ -58,7 +58,7 @@ func (h *hashcash) String() string {
 }
 
 func (h *hashcash) Check() bool {
-	hashString := data2Sha1Hash(h.String())
+	hashString := data2Sha256Hash(h.String())
 	if h.Bits > len(hashString) {
 		return false
 	}
@@ -99,7 +99,7 @@ func randBytes() []byte {
 	return buf
 }
 
-func data2Sha1Hash(data string) string {
+func data2Sha256Hash(data string) string {
 	h := sha256.New()
 	h.Write([]byte(data))
 	bs := h.Sum(nil)
