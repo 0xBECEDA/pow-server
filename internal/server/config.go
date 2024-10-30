@@ -12,6 +12,7 @@ const (
 	defaultWriteTimeout = 10
 	defaultConnections  = 100
 	defaultChallengeTTL = 20
+	defaultComplexity   = 5
 
 	portEnv             = "PORT"
 	writeTimeoutEnv     = "WRITE_TIMEOUT"
@@ -19,6 +20,7 @@ const (
 	challengeTTLEnv     = "CHALLENGE_TTL"
 	connectionsLimitEnv = "CONNECTIONS_LIMIT"
 	maxWorkersEnv       = "MAX_NUM_WORKERS"
+	complexityEnv       = "COMPLEXITY"
 )
 
 var (
@@ -30,6 +32,7 @@ type Config struct {
 	ConnectionsLimit uint64
 	MinWorkers       uint64
 	MaxWorkers       uint64
+	Complexity       int
 	WriteTimeout     time.Duration
 	ReadTimeout      time.Duration
 	ChallengeTTL     time.Duration
@@ -90,6 +93,17 @@ func (c *Config) Load() error {
 			return err
 		}
 		c.ConnectionsLimit = limit
+	}
+
+	complexity := os.Getenv(complexityEnv)
+	if complexity == "" {
+		c.Complexity = defaultComplexity
+	} else {
+		comp, err := strconv.ParseInt(complexity, 10, 64)
+		if err != nil {
+			return err
+		}
+		c.Complexity = int(comp)
 	}
 
 	maxWorkers := os.Getenv(maxWorkersEnv)

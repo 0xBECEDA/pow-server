@@ -20,7 +20,7 @@ import (
 
 func TestServer(t *testing.T) {
 	const (
-		challengeTTL = 7
+		challengeTTL = 5
 		writeTimeout = 10 * time.Second
 		readTimeout  = 10 * time.Second
 		port         = 8080
@@ -33,6 +33,7 @@ func TestServer(t *testing.T) {
 	err = c.WithEnv(map[string]string{
 		"CHALLENGE_TTL":     strconv.Itoa(challengeTTL),
 		"CONNECTIONS_LIMIT": strconv.Itoa(connsLimit + 1), // add extra conn for Ryuk (https://golang.testcontainers.org/features/garbage_collector/)
+		"COMPLEXITY":        "2",
 	}).
 		WaitForService("server", wait.ForListeningPort("8080/tcp").
 			WithStartupTimeout(5*time.Second)).

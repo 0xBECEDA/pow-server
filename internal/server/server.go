@@ -6,77 +6,44 @@ import (
 	"log"
 	"net"
 	"sync"
-	"sync/atomic"
-	"time"
 	"world-of-wisdom/internal/pow"
 	"world-of-wisdom/internal/quotes"
 )
 
 type Server struct {
-	cfg          *Config
-	powService   pow.Service
-	quoteService quotes.Service
+	cfg           *Config
+	powService    pow.Service
+	quoteService  quotes.Service
+	workerService WorkerService
 
-	wg          sync.WaitGroup
-	workerCount atomic.Int64
-	sem         chan struct{}
+	connectionLimit chan struct{}
 }
 
-func NewServer(cfg *Config, challengeServ pow.Service, quoteServ quotes.Service) *Server {
+func NewServer(cfg *Config, challengeServ pow.Service, quoteServ quotes.Service, workerService WorkerService) *Server {
 	return &Server{
-		cfg:          cfg,
-		powService:   challengeServ,
-		quoteService: quoteServ,
-		sem:          make(chan struct{}, cfg.ConnectionsLimit),
+		cfg:             cfg,
+		powService:      challengeServ,
+		quoteService:    quoteServ,
+		workerService:   workerService,
+		connectionLimit: make(chan struct{}, cfg.ConnectionsLimit),
 	}
 }
 
-func (s *Server) worker(ctx context.Context, conns chan net.Conn) {
-	defer func() {
-		s.wg.Done()
-		s.workerCount.Add(-1)
-	}()
-
+func (s *Server) connWorker(
+	ctx context.Context,
+	conns chan net.Conn,
+	stop chan struct{}) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case conn, ok := <-conns:
-			if !ok || conn == nil {
+			if !ok {
 				return
 			}
 			s.handleConn(ctx, conn)
-		}
-	}
-}
-
-func (s *Server) workerManager(ctx context.Context, conns chan net.Conn) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for i := uint64(0); i < s.cfg.MinWorkers; i++ {
-		s.wg.Add(1)
-		go s.worker(ctx, conns)
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			s.wg.Wait()
+		case <-stop:
 			return
-		case <-ticker.C:
-			queueLength := len(conns)
-			workerCount := int(s.workerCount.Load())
-
-			if queueLength > 0 && workerCount < int(s.cfg.MaxWorkers) {
-				s.wg.Add(1)
-				s.workerCount.Add(1)
-				go s.worker(ctx, conns)
-			}
-
-			if queueLength == 0 && workerCount > int(s.cfg.MinWorkers) {
-				conns <- nil // empty value to close worker
-			}
 		}
 	}
 }
@@ -90,29 +57,34 @@ func (s *Server) Listen(ctx context.Context) error {
 		return err
 	}
 
+	var wg sync.WaitGroup
 	defer func() {
 		l.Close()
-		s.wg.Wait()
+		wg.Wait()
 	}()
 
 	connsQueue := make(chan net.Conn, s.cfg.ConnectionsLimit)
-	go s.workerManager(ctx, connsQueue)
+	listenerErr := make(chan error)
+
+	wg.Add(1)
+	go func() {
+		s.workerService.Start(ctx, connsQueue, s.connWorker)
+		wg.Done()
+	}()
 
 	go func() {
 		for {
 			conn, err := l.Accept()
-			select {
-			case <-ctx.Done():
+			if err != nil {
+				log.Printf("error accepting client connection: %v", err)
+				listenerErr <- err
 				return
-			default:
-				if err != nil {
-					log.Printf("error accepting client connection: %v", err)
-					continue
-				}
 			}
 
 			select {
-			case s.sem <- struct{}{}:
+			case <-ctx.Done():
+				return
+			case s.connectionLimit <- struct{}{}:
 				connsQueue <- conn
 			default:
 				s.handleConnRefused(conn)
@@ -120,6 +92,10 @@ func (s *Server) Listen(ctx context.Context) error {
 		}
 	}()
 
-	<-ctx.Done()
-	return nil
+	select {
+	case <-ctx.Done():
+		return nil
+	case err := <-listenerErr:
+		return err
+	}
 }

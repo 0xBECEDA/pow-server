@@ -24,6 +24,7 @@ func TestConfigLoad(t *testing.T) {
 				connectionsLimitEnv: "80",
 				challengeTTLEnv:     "5",
 				maxWorkersEnv:       "4",
+				complexityEnv:       "2",
 			},
 			expectedConfig: Config{
 				Port:             8080,
@@ -33,6 +34,7 @@ func TestConfigLoad(t *testing.T) {
 				ChallengeTTL:     5 * time.Second,
 				MaxWorkers:       4,
 				MinWorkers:       2,
+				Complexity:       2,
 			},
 			expectedError: nil,
 		},
@@ -63,6 +65,7 @@ func TestConfigLoad(t *testing.T) {
 				ChallengeTTL:     defaultChallengeTTL * time.Second,
 				MaxWorkers:       defaultConnections,
 				MinWorkers:       defaultConnections / 2,
+				Complexity:       defaultComplexity,
 			},
 			expectedError: nil,
 		},

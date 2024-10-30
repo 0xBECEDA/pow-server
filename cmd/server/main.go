@@ -22,6 +22,7 @@ func main() {
 		cfg,
 		pow.NewChallengeService(db),
 		quotes.NewService(),
+		server.NewWorkerManager(cfg.MinWorkers, cfg.MaxWorkers),
 	)
 
 	if err := tcpServer.Listen(ctx); err != nil {

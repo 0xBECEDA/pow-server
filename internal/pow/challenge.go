@@ -1,7 +1,7 @@
 package pow
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -72,7 +72,7 @@ func (h *hashcash) Check() bool {
 }
 
 func (h *hashcash) Compute(maxIterations uint64) error {
-	for h.Counter <= int64(maxIterations) {
+	for h.Counter < int64(maxIterations) {
 		if h.Check() {
 			return nil
 		}
@@ -100,7 +100,7 @@ func randBytes() []byte {
 }
 
 func data2Sha1Hash(data string) string {
-	h := sha1.New()
+	h := sha256.New()
 	h.Write([]byte(data))
 	bs := h.Sum(nil)
 	return fmt.Sprintf("%x", bs)

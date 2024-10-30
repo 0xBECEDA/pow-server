@@ -39,7 +39,7 @@ func (s *Server) handleConn(ctx context.Context, conn net.Conn) {
 		if err := conn.Close(); err != nil {
 			log.Printf("error closing client connection: %s", err.Error())
 		}
-		<-s.sem
+		<-s.connectionLimit
 	}()
 
 	for {
@@ -95,7 +95,7 @@ func (s *Server) challengeHandler(req *message.Message) (*message.Message, error
 		return nil, ErrEmptyMessage
 	}
 
-	hash := pow.NewHashcash(5, req.Data)
+	hash := pow.NewHashcash(s.cfg.Complexity, req.Data)
 
 	log.Printf("adding challenge %++v", hash)
 
