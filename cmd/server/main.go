@@ -3,15 +3,19 @@ package main
 import (
 	"context"
 	"log"
+	"world-of-wisdom/configs"
+	servercfg "world-of-wisdom/configs/server"
 	"world-of-wisdom/internal/pow"
 	"world-of-wisdom/internal/quotes"
 	"world-of-wisdom/internal/server"
 	"world-of-wisdom/internal/storage"
 )
 
+const cfgPath = "../configs/server/config.yaml"
+
 func main() {
-	cfg := &server.Config{}
-	if err := cfg.Load(); err != nil {
+	cfg := &servercfg.Config{}
+	if err := configs.LoadConfig(cfgPath, cfg); err != nil {
 		log.Fatalf("failed start server %s", err.Error())
 	}
 

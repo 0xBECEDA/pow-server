@@ -1,0 +1,7 @@
+port: 8080
+connections_limit: 100
+max_workers: 20
+write_timeout: 10s
+read_timeout: 10s
+challenge_ttl: 20s
+complexity: 5

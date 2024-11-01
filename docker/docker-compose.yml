@@ -6,12 +6,12 @@ services:
     image: app:latest
     environment:
       - 'PORT=8080'
-      - 'CHALLENGE_TTL=${CHALLENGE_TTL}'
-      - 'CONNECTIONS_LIMIT=${CONNECTIONS_LIMIT}'
-      - 'WRITE_TIMEOUT=${WRITE_TIMEOUT}'
-      - 'READ_TIMEOUT=${READ_TIMEOUT}'
+      - 'CHALLENGE_TTL=${CHALLENGE_TTL:-30s}'
+      - 'CONNECTIONS_LIMIT=${CONNECTIONS_LIMIT:-100}'
+      - 'WRITE_TIMEOUT=${WRITE_TIMEOUT:-10s}'
+      - 'READ_TIMEOUT=${READ_TIMEOUT:-10s}'
       - 'MAX_NUM_WORKERS=${MAX_NUM_WORKERS}'
-      - 'COMPLEXITY=${COMPLEXITY}'
+      - 'COMPLEXITY=${COMPLEXITY:-5}'
     command: ["/server"]
     ports:
       - "8080:8080"
@@ -22,8 +22,8 @@ services:
       - 'PORT=8080'
       - 'HOSTNAME=server'
       - 'RESOURCE=example.com'
-      - 'WRITE_TIMEOUT=${WRITE_TIMEOUT}'
-      - 'READ_TIMEOUT=${READ_TIMEOUT}'
+      - 'WRITE_TIMEOUT=${WRITE_TIMEOUT:-10s}'
+      - 'READ_TIMEOUT=${READ_TIMEOUT:-10s}'
     command: ["/client"]
     restart: "on-failure"
     depends_on:

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"time"
+	"world-of-wisdom/configs/client"
 	"world-of-wisdom/internal/message"
 	"world-of-wisdom/internal/pow"
 	"world-of-wisdom/internal/utils"
@@ -17,11 +18,11 @@ const (
 )
 
 type Client struct {
-	cfg  *Config
+	cfg  *client.Config
 	conn net.Conn
 }
 
-func New(config *Config) *Client {
+func New(config *client.Config) *Client {
 	return &Client{
 		cfg: config,
 	}

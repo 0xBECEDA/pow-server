@@ -6,12 +6,13 @@ import (
 	"log"
 	"net"
 	"sync"
+	"world-of-wisdom/configs/server"
 	"world-of-wisdom/internal/pow"
 	"world-of-wisdom/internal/quotes"
 )
 
 type Server struct {
-	cfg           *Config
+	cfg           *server.Config
 	powService    pow.Service
 	quoteService  quotes.Service
 	workerService WorkerService
@@ -19,7 +20,7 @@ type Server struct {
 	connectionLimit chan struct{}
 }
 
-func NewServer(cfg *Config, challengeServ pow.Service, quoteServ quotes.Service, workerService WorkerService) *Server {
+func NewServer(cfg *server.Config, challengeServ pow.Service, quoteServ quotes.Service, workerService WorkerService) *Server {
 	return &Server{
 		cfg:             cfg,
 		powService:      challengeServ,

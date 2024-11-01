@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
+	client2 "world-of-wisdom/configs/client"
 	"world-of-wisdom/internal/client"
 )
 
@@ -43,7 +44,7 @@ func TestClientAndServer(t *testing.T) {
 	log.SetOutput(&buf)
 
 	// Start client and try to get quote
-	client := client.New(&client.Config{
+	client := client.New(&client2.Config{
 		Hostname:     "localhost",
 		Resource:     "example",
 		Port:         port,
